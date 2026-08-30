@@ -53,11 +53,7 @@
 
     @if ($threads->isEmpty())
         <div class="mt-6">
-            <x-empty-state
-                icon="question-mark-circle"
-                title="該当する質問はまだありません"
-                description="フィルタ条件を変更するか、新しい質問を投稿してみましょう。"
-            >
+            <x-empty-state icon="question-mark-circle" title="該当する質問はまだありません" description="フィルタ条件を変更するか、新しい質問を投稿してみましょう。">
                 @if ($canPost)
                     <x-slot:action>
                         <x-link-button href="{{ route('qa-board.create') }}" variant="primary">
