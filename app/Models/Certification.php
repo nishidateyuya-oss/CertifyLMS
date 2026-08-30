@@ -163,4 +163,11 @@ class Certification extends Model
 
         return $query->where('name', 'LIKE', '%'.$keyword.'%');
     }
+
+    // 以下、模擬案件機能追加
+
+    public function Threads(): HasMany
+    {
+        return $this->hasMany(QaThread::class);
+    }
 }
