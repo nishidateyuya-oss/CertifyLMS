@@ -17,6 +17,7 @@ use App\Http\Controllers\EnrollmentManagementController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LearningHourTargetController;
 use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\MeetingPackController;
 use App\Http\Controllers\MeetingQuotaHistoryController;
 use App\Http\Controllers\MockExamAnswerController;
 use App\Http\Controllers\MockExamCatalogController;
@@ -478,7 +479,7 @@ if (app()->environment('local')) {
 }
 
 // 以下、模擬案件追加機能
-
+// 質問掲示板ルーティング
 Route::middleware(['auth', 'role:student,coach', 'active-learning'])->group(function () {
     Route::get('/qa-board', [QaThreadController::class, 'index'])->name('qa-board.index');
     Route::get('/qa-board/{thread}', [QaThreadController::class, 'show'])->name('qa-board.show');
@@ -498,9 +499,17 @@ Route::middleware(['auth', 'role:student', 'active-learning'])->group(function (
     Route::delete('/qa-board/{thread}/replies/{reply}', [QaReplyController::class, 'delete'])->name('qa-board.replies.destroy');
 });
 
-Route::middleware(['auth', 'role:admin', 'active-learning'])->group(function () {
+Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/qa-board', [QaThreadController::class, 'index'])->name('admin.qa-board.index');
     Route::get('/admin/qa-board/{thread}', [QaThreadController::class, 'show'])->name('admin.qa-board.show');
     Route::delete('/admin/qa-board/{thread}', [QaThreadController::class, 'delete'])->name('admin.qa-board.destroy');
     Route::delete('/admin/qa-board/{thread}/replies/{reply}', [QaReplyController::class, 'delete'])->name('admin.qa-board.replies.destroy');
+});
+
+// 面談パックルーティング
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::resource('meeting-packs', MeetingPackController::class);
+    Route::post('/meeting-packs/{plan}/publish', [MeetingPackController::class, 'publish'])->name('meeting-packs.publish');
+    Route::post('/meeting-packs/{plan}/archive', [MeetingPackController::class, 'archive'])->name('meeting-packs.archive');
+    Route::post('/meeting-packs/{plan}/unarchive', [MeetingPackController::class, 'unarchive'])->name('meeting-packs.unarchive');
 });

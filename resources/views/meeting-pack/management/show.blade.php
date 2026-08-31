@@ -18,7 +18,7 @@
         MeetingPackStatus::Archived => ['variant' => 'gray', 'label' => 'アーカイブ'],
     };
 
-    $paymentBadge = fn (PaymentStatus $s) => match ($s) {
+    $paymentBadge = fn(PaymentStatus $s) => match ($s) {
         PaymentStatus::Succeeded => ['variant' => 'success'],
         PaymentStatus::Pending => ['variant' => 'warning'],
         PaymentStatus::Failed => ['variant' => 'danger'],
@@ -57,7 +57,8 @@
 
             @can('publish', $plan)
                 @if ($plan->status === MeetingPackStatus::Draft)
-                    <form novalidate method="POST" action="{{ route('admin.meeting-packs.publish', $plan) }}" class="inline-block">
+                    <form novalidate method="POST" action="{{ route('admin.meeting-packs.publish', $plan) }}"
+                        class="inline-block">
                         @csrf
                         <x-button type="submit" variant="primary">
                             <x-icon name="check-circle" class="w-4 h-4" />
@@ -69,7 +70,8 @@
 
             @can('archive', $plan)
                 @if ($plan->status === MeetingPackStatus::Published)
-                    <form novalidate method="POST" action="{{ route('admin.meeting-packs.archive', $plan) }}" class="inline-block">
+                    <form novalidate method="POST" action="{{ route('admin.meeting-packs.archive', $plan) }}"
+                        class="inline-block">
                         @csrf
                         <x-button type="submit" variant="secondary">
                             <x-icon name="archive-box" class="w-4 h-4" />
@@ -81,7 +83,8 @@
 
             @can('unarchive', $plan)
                 @if ($plan->status === MeetingPackStatus::Archived)
-                    <form novalidate method="POST" action="{{ route('admin.meeting-packs.unarchive', $plan) }}" class="inline-block">
+                    <form novalidate method="POST" action="{{ route('admin.meeting-packs.unarchive', $plan) }}"
+                        class="inline-block">
                         @csrf
                         <x-button type="submit" variant="secondary">
                             <x-icon name="arrow-uturn-left" class="w-4 h-4" />
@@ -93,8 +96,8 @@
 
             @can('delete', $plan)
                 @if ($plan->status !== MeetingPackStatus::Published)
-                    <form novalidate method="POST" action="{{ route('admin.meeting-packs.destroy', $plan) }}" class="inline-block"
-                          onsubmit="return confirm('この面談パックを削除しますか？(公開中は削除できません)');">
+                    <form novalidate method="POST" action="{{ route('admin.meeting-packs.destroy', $plan) }}"
+                        class="inline-block" onsubmit="return confirm('この面談パックを削除しますか？(公開中は削除できません)');">
                         @csrf
                         @method('DELETE')
                         <x-button type="submit" variant="danger">
@@ -122,7 +125,8 @@
 
         <x-card padding="md" shadow="sm">
             <x-slot:header>購入数</x-slot:header>
-            <div class="text-3xl font-bold text-ink-900 tabular-nums">{{ class_exists(\App\Models\Payment::class) ? $plan->payments->count() : 0 }}</div>
+            <div class="text-3xl font-bold text-ink-900 tabular-nums">
+                {{ class_exists(\App\Models\Payment::class) ? $plan->payments->count() : 0 }}</div>
             <div class="text-sm text-ink-500">件(直近 20 件のみ表示)</div>
         </x-card>
     </div>
@@ -130,7 +134,7 @@
     <x-card class="mt-6" padding="md" shadow="sm">
         <x-slot:header>購入履歴(直近 20 件)</x-slot:header>
 
-        @if (! class_exists(\App\Models\Payment::class) || $plan->payments->isEmpty())
+        @if (!class_exists(\App\Models\Payment::class) || $plan->payments->isEmpty())
             <p class="text-sm text-ink-500 py-4 text-center">この SKU の購入はまだありません。</p>
         @else
             <x-table>
@@ -147,7 +151,8 @@
                     @php $pb = $paymentBadge($payment->status); @endphp
                     <x-table.row>
                         <x-table.cell>
-                            <a href="{{ route('admin.users.show', $payment->user_id) }}" class="text-sm font-medium text-ink-900 hover:text-primary-700">
+                            <a href="{{ route('admin.users.show', $payment->user_id) }}"
+                                class="text-sm font-medium text-ink-900 hover:text-primary-700">
                                 {{ $payment->user->name ?? '—' }}
                             </a>
                             <div class="text-xs text-ink-500">{{ $payment->user->email ?? '' }}</div>
