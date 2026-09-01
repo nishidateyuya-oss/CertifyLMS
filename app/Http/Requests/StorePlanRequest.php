@@ -8,7 +8,7 @@ use App\Enums\UserRole;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreMeetingPackRequest extends FormRequest
+class StorePlanRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -34,9 +34,8 @@ class StoreMeetingPackRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'meeting_count' => ['required', 'integer', 'between:1,100'],
-            'price' => ['required', 'integer', 'between:0,1000000'],
-            'stripe_price_id' => ['nullable', 'string', 'max:255'],
+            'duration_days' => ['required', 'integer', 'between:1,3650'],
+            'default_meeting_quota' => ['required', 'integer', 'between:0,1000'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ];
     }
@@ -44,14 +43,13 @@ class StoreMeetingPackRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'SKU名を入力してください',
-            'name.max' => 'SKU名は100文字以内で入力してください',
+            'name.required' => 'プラン名を入力してください',
+            'name.max' => 'プラン名は100文字以内で入力してください',
             'description.max' => '説明は2000文字以内で入力してください',
-            'meeting_count.required' => '面談回数を入力してください',
-            'meeting_count.between' => '1から100の範囲で入力してください',
-            'price.required' => '価格を入力してください',
-            'price.between' => '0から1000000の範囲で入力してください',
-            'stripe_price_id.max' => 'Stripe Price IDは255文字以内で入力してください',
+            'duration_days.required' => '受講期間を入力してください',
+            'duration_days.between' => '1から3650の範囲で入力してください',
+            'default_meeting_quota.required' => '面談回数を入力してください',
+            'default_meeting_quota.between' => '0から1000の範囲で入力してください',
             'sort_order' => '0以上の数字で入力してください',
         ];
     }
