@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreQaReplyRequest;
 use App\Models\QaReply;
 use App\Models\QaThread;
+use App\Notifications\NewMessageNotification;
 
 class QaReplyController extends Controller
 {
@@ -14,8 +15,11 @@ class QaReplyController extends Controller
     {
         $validated = $request->validated();
         $validated['qa_thread_id'] = $thread->id;
-        $request->user()->qaReplies()->create($validated);
+        $reply = $request->user()->qaReplies()->create($validated);
 
+        if($thread->user->id !== auth()->id()) {
+            $thread->user->notify(new NewMessageNotification($reply));
+        }
         return back()->with('success', '回答を投稿しました');
     }
 

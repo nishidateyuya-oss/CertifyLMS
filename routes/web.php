@@ -25,6 +25,7 @@ use App\Http\Controllers\MockExamController;
 use App\Http\Controllers\MockExamQuestionController;
 use App\Http\Controllers\MockExamSessionController;
 use App\Http\Controllers\MockExamSessionMonitorController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\QaReplyController;
@@ -522,4 +523,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/plans/{plan}/publish', [PlanController::class, 'publish'])->name('plans.publish');
     Route::post('/plans/{plan}/archive', [PlanController::class, 'archive'])->name('plans.archive');
     Route::post('/plans/{plan}/unarchive', [PlanController::class, 'unarchive'])->name('plans.unarchive');
+});
+
+// 通知基盤(アプリ内 + メール)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.markAsRead');
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.markAllAsRead');
 });
