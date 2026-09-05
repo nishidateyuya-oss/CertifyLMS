@@ -327,4 +327,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function enrollmentGoals(): HasMany
+    {
+        return $this->hasMany(EnrollmentGoal::class);
+    }
 }

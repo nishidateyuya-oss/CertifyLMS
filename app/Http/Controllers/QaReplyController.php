@@ -17,9 +17,10 @@ class QaReplyController extends Controller
         $validated['qa_thread_id'] = $thread->id;
         $reply = $request->user()->qaReplies()->create($validated);
 
-        if($thread->user->id !== auth()->id()) {
+        if ($thread->user->id !== auth()->id()) {
             $thread->user->notify(new NewMessageNotification($reply));
         }
+
         return back()->with('success', '回答を投稿しました');
     }
 

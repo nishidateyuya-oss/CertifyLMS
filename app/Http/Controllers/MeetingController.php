@@ -20,6 +20,7 @@ use App\Models\Enrollment;
 use App\Models\Meeting;
 use App\Models\MeetingMemo;
 use App\Models\User;
+use App\Notifications\NewMessageNotification;
 use App\Services\CoachMeetingLoadService;
 use App\Services\MeetingAvailabilityService;
 use App\Services\MeetingQuotaService;
@@ -215,6 +216,10 @@ class MeetingController extends Controller
 
             return $meeting->fresh();
         });
+
+        // 模擬案件通知処理追加
+        $student->notify(new NewMessageNotification($meeting));
+        $meeting->coach->notify(new NewMessageNotification($meeting));
 
         return redirect()
             ->route('meetings.show', $meeting)

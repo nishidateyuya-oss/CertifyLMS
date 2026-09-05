@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
             QaThreadSeeder::class,
             PaymentSeeder::class,
             NotificationSeeder::class,
+            EnrollmentGoalSeeder::class,
         ]);
     }
 }

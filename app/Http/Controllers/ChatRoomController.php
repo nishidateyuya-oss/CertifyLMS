@@ -17,6 +17,7 @@ use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use App\Notifications\NewMessageNotification;
 
 /**
  * Chat Controller。受講生 / コーチ / admin 共通で利用される。
@@ -145,7 +146,9 @@ class ChatRoomController extends Controller
             throw new CertificationCoachNotAssignedForChatException;
         }
 
-        $action($user, $room, $request->validated());
+        $message = $action($user, $room, $request->validated());
+
+        NewMessageNotification::sendForChatMessage($room, $user, $message);
 
         return redirect()
             ->route('chat.show', $room)

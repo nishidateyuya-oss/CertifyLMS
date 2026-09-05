@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
-use App\Models\User;
-use App\Models\Meeting;
 use App\Models\ChatMessage;
+use App\Models\Meeting;
 use App\Models\QaReply;
+use App\Models\User;
 use App\Notifications\NewMessageNotification;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Mail;
@@ -21,7 +21,7 @@ class NotificationSeeder extends Seeder
         Mail::fake();
 
         $student = User::where('role', UserRole::Student)->first() ?? User::factory()->create(['role' => UserRole::Student]);
-        $coach   = User::where('role', UserRole::Coach)->first() ?? User::factory()->create(['role' => UserRole::Coach]);
+        $coach = User::where('role', UserRole::Coach)->first() ?? User::factory()->create(['role' => UserRole::Coach]);
 
         // 1. 受講生（Student）向けの通知データを作成
         $this->seedStudentNotifications($student);
@@ -36,9 +36,9 @@ class NotificationSeeder extends Seeder
     private function seedStudentNotifications(User $student): void
     {
         // ソースとなる各モデルを取得（無ければ Factory で作成）
-        $meeting     = Meeting::first() ?? Meeting::factory()->create();
+        $meeting = Meeting::first() ?? Meeting::factory()->create();
         $chatMessage = ChatMessage::first() ?? ChatMessage::factory()->create();
-        $qaReply     = QaReply::first() ?? QaReply::factory()->create();
+        $qaReply = QaReply::first() ?? QaReply::factory()->create();
 
         $sources = [$meeting, $chatMessage, $qaReply];
 
@@ -61,7 +61,7 @@ class NotificationSeeder extends Seeder
     {
         // コーチ側でも動かすため別レコードまたは最新のモデルを取得
         $meeting = Meeting::first() ?? Meeting::factory()->create();
-        
+
         $notification = new NewMessageNotification($meeting);
         $coach->notify($notification);
     }

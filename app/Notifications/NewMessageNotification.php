@@ -7,10 +7,13 @@ namespace App\Notifications;
 use App\Models\ChatMessage;
 use App\Models\Meeting;
 use App\Models\QaReply;
+use App\Models\ChatRoom;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 
 class NewMessageNotification extends Notification
 {
@@ -47,9 +50,9 @@ class NewMessageNotification extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'title'   => $this->buildTitle(),
+            'title' => $this->buildTitle(),
             'message' => $this->buildBody(),
-            'url'     => $this->buildUrl(),
+            'url' => $this->buildUrl(),
         ];
     }
 
@@ -59,10 +62,10 @@ class NewMessageNotification extends Notification
     private function buildTitle(): string
     {
         return match (true) {
-            $this->source instanceof Meeting     => '面談予約が確定しました',
+            $this->source instanceof Meeting => '面談予約が確定しました',
             $this->source instanceof ChatMessage => '新着チャットメッセージがあります',
-            $this->source instanceof QaReply     => '質問掲示板に回答がありました',
-            default                              => '新しいお知らせがあります',
+            $this->source instanceof QaReply => '質問掲示板に回答がありました',
+            default => '新しいお知らせがあります',
         };
     }
 
@@ -72,16 +75,20 @@ class NewMessageNotification extends Notification
     private function buildBody(): string
     {
         if ($this->source instanceof Meeting) {
-            $schedule = $this->source->scheduled_at;
-            return "次回の面談は {$schedule} です。";
+            $schedule = $this->source->scheduled_at?->format('Y/m/d H:i');
+
+            return "次回の面談日時は {$schedule} です。";
         }
 
         if ($this->source instanceof ChatMessage) {
-            return '担当コーチからメッセージが届きました。';
+            $senderName = $this->source->sender->name ?? 'ユーザー';
+
+            return "{$senderName}さんから新着メッセージが届きました。";
         }
 
         if ($this->source instanceof QaReply) {
             $title = $this->source->qaThread->title ?? '質問';
+
             return "「{$title}」に新しい回答がつきました。";
         }
 
@@ -108,4 +115,17 @@ class NewMessageNotification extends Notification
         return url('/');
     }
 
+    public static function sendForChatMessage(ChatRoom $room, User $sender, ChatMessage $message): void
+    {
+        $student = $room->enrollment->user;
+
+        if ($sender->id === $student->id) {
+            // 送信者が受講生の場合：担当コーチへ通知
+            $coaches = $room->enrollment->certification->coaches;
+            NotificationFacade::send($coaches, new self($message));
+        } else {
+            // 送信者がコーチ/管理者の場合：受講生へ通知
+            $student->notify(new self($message));
+        }
+    }
 }
