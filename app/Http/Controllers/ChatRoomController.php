@@ -10,6 +10,7 @@ use App\Http\Requests\Chat\IndexAsCoachRequest;
 use App\Http\Requests\Chat\IndexRequest;
 use App\Http\Requests\Chat\StoreMessageRequest;
 use App\Models\ChatRoom;
+use App\Notifications\NewMessageNotification;
 use App\Services\ChatUnreadCountService;
 use App\UseCases\Chat\ShowAction;
 use App\UseCases\Chat\StoreMessageAction;
@@ -17,7 +18,6 @@ use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
-use App\Notifications\NewMessageNotification;
 
 /**
  * Chat Controller。受講生 / コーチ / admin 共通で利用される。

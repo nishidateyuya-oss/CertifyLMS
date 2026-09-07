@@ -1,11 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\EnrollmentGoal;
 use App\Models\User;
-use App\Enums\UserRole;
-use Illuminate\Auth\Access\Response;
 
 class EnrollmentGoalPolicy
 {
@@ -65,13 +66,15 @@ class EnrollmentGoalPolicy
         //
     }
 
-    public function markAchieved(User $user, EnrollmentGoal $enrollmentGoal) {
+    public function markAchieved(User $user, EnrollmentGoal $enrollmentGoal)
+    {
         return $user->id === $enrollmentGoal->user_id
-                && $enrollmentGoal->achieved_at === null;;
+                && $enrollmentGoal->achieved_at === null;
     }
 
-    public function unmarkAchieved(User $user, EnrollmentGoal $enrollmentGoal) {
+    public function unmarkAchieved(User $user, EnrollmentGoal $enrollmentGoal)
+    {
         return $user->id === $enrollmentGoal->user_id
-                && $enrollmentGoal->achieved_at !== null;;
+                && $enrollmentGoal->achieved_at !== null;
     }
 }

@@ -9,6 +9,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Notifications\Auth\ResetPasswordNotification;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * プラン受講中のユーザーを表す Model。
@@ -331,5 +333,27 @@ class User extends Authenticatable
     public function enrollmentGoals(): HasMany
     {
         return $this->hasMany(EnrollmentGoal::class);
+    }
+
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                // DBに保存されている値（avatar_url カラム）を取得
+                $path = $this->attributes['avatar_url'] ?? null;
+
+                if (! $path) {
+                    return null; // 画像がない場合は null を返し <x-avatar> 側でイニシャル表示
+                }
+
+                // すでに URL 形式（http/https）で保存されている場合はそのまま返す
+                if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                    return $path;
+                }
+
+                // storage/app/public 内の相対パス（例: avatars/xxx.png）を公開用URLに変換
+                return Storage::url($path);
+            }
+        );
     }
 }
