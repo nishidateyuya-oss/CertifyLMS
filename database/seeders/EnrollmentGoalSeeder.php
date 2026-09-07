@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use App\Models\Enrollment;
@@ -92,8 +94,8 @@ class EnrollmentGoalSeeder extends Seeder
             EnrollmentGoal::create([
                 'user_id' => $student->id,
                 'enrollment_id' => $enrollment->id,
-                'title' => "受講生（{$student->name}）の個人目標 - " . ($isCompleted ? '達成済' : '進行中'),
-                'target_date' => $isCompleted 
+                'title' => "受講生（{$student->name}）の個人目標 - ".($isCompleted ? '達成済' : '進行中'),
+                'target_date' => $isCompleted
                     ? Carbon::now()->subDays(rand(1, 15))->format('Y-m-d')
                     : Carbon::now()->addDays(rand(10, 30))->format('Y-m-d'),
                 'description' => '権限確認用：コーチおよび管理者から閲覧可能か、他受講生から制限されるかテスト',

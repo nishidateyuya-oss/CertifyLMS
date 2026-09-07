@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\ChatMessage;
+use App\Models\ChatRoom;
 use App\Models\Meeting;
 use App\Models\QaReply;
-use App\Models\ChatRoom;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Database\Eloquent\Model;

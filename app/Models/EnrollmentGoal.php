@@ -25,6 +25,7 @@ class EnrollmentGoal extends Model
         'target_date' => 'date',
         'achieved_at' => 'date',
     ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

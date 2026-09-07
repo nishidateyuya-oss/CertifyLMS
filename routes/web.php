@@ -42,6 +42,7 @@ use App\Http\Controllers\SectionQuestionAnswerController;
 use App\Http\Controllers\SectionQuestionController;
 use App\Http\Controllers\SectionQuizController;
 use App\Http\Controllers\SectionQuizResultController;
+use App\Http\Controllers\SettingController;
 use App\Http\Controllers\Settings\AvailabilityController as SettingsAvailabilityController;
 use App\Http\Controllers\Settings\SettingsDefaultEnrollmentController;
 use App\Http\Controllers\UserController;
@@ -541,4 +542,13 @@ Route::middleware(['auth', 'role:student', 'active-learning'])->group(function (
     Route::delete('/enrollment-goals/{goal}', [EnrollmentGoalController::class, 'destroy'])->name('enrollment-goals.destroy');
     Route::post('/enrollment-goals/{goal}/achieve', [EnrollmentGoalController::class, 'achieve'])->name('enrollment-goals.markAchieved');
     Route::delete('/enrollment-goals/{goal}/unachieve', [EnrollmentGoalController::class, 'unachieve'])->name('enrollment-goals.unmarkAchieved');
+});
+
+// プロフィール設定
+Route::middleware(['auth'])->prefix('settings')->group(function () {
+    Route::get('/profile', [SettingController::class, 'edit'])->name('settings.profile.edit');
+    Route::patch('/profile', [SettingController::class, 'update'])->name('settings.profile.update');
+    Route::post('/avatar', [SettingController::class, 'store'])->name('settings.avatar.store');
+    Route::delete('/avatar', [SettingController::class, 'destroy'])->name('settings.avatar.destroy');
+    Route::put('/password', [SettingController::class, 'changePassword'])->name('settings.password.update');
 });

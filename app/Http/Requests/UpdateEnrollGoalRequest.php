@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateEnrollGoalRequest extends FormRequest
@@ -17,18 +20,19 @@ class UpdateEnrollGoalRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'title' => ['required', 'string', 'max:100'],
             'target_date' => ['required', 'date', 'after_or_equal:today'],
-            'description' => ['nullable', 'string', 'max:1000'], 
+            'description' => ['nullable', 'string', 'max:1000'],
         ];
     }
 
-    public function messages(): array{
+    public function messages(): array
+    {
         return [
             'title.required' => '目標を入力してください',
             'title.max' => '目標は100文字以内で入力してください',
