@@ -13,16 +13,11 @@
     <x-slot:header>コーチメモ</x-slot:header>
 
     @can('create', [EnrollmentNote::class, $enrollment])
-        <form novalidate method="POST" action="{{ route('enrollments.notes.store', $enrollment) }}" class="space-y-3 pb-4 border-b border-ink-100">
+        <form novalidate method="POST" action="{{ route('enrollments.notes.store', $enrollment) }}"
+            class="space-y-3 pb-4 border-b border-ink-100">
             @csrf
-            <x-form.textarea
-                name="body"
-                label="新規メモ"
-                :rows="3"
-                :value="old('body')"
-                :error="$errors->first('body')"
-                :maxlength="2000"
-            />
+            <x-form.textarea name="body" label="新規メモ" :rows="3" :value="old('body')" :error="$errors->first('body')"
+                :maxlength="2000" />
             <x-button type="submit" variant="primary" size="sm">
                 <x-icon name="plus" class="w-4 h-4" />
                 追加
@@ -44,16 +39,14 @@
                         </div>
                         <div class="flex items-center gap-1">
                             @can('update', $note)
-                                <x-link-button href="{{ route('enrollment-notes.edit', $note) }}" variant="ghost" size="sm">
+                                <x-link-button href="{{ route('enrollment-notes.edit', $note) }}" variant="ghost"
+                                    size="sm">
                                     <x-icon name="pencil-square" class="w-4 h-4" />
                                 </x-link-button>
                             @endcan
                             @can('delete', $note)
-                                <form novalidate
-                                    method="POST"
-                                    action="{{ route('enrollment-notes.destroy', $note) }}"
-                                    onsubmit="return confirm('このメモを削除しますか？');"
-                                >
+                                <form novalidate method="POST" action="{{ route('enrollment-notes.destroy', $note) }}"
+                                    onsubmit="return confirm('このメモを削除しますか？');">
                                     @csrf
                                     @method('DELETE')
                                     <x-button type="submit" variant="ghost" size="sm">

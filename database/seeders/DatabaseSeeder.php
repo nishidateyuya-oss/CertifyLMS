@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
             PaymentSeeder::class,
             NotificationSeeder::class,
             EnrollmentGoalSeeder::class,
+            EnrollmentNoteSeeder::class,
         ]);
     }
 }
