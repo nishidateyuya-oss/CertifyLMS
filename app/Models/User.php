@@ -335,8 +335,14 @@ class User extends Authenticatable
         return $this->hasMany(EnrollmentGoal::class);
     }
 
-    public function notes(): HasMany {
+    public function notes(): HasMany
+    {
         return $this->hasMany(EnrollmentNote::class, 'author');
+    }
+
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(Announcement::class);
     }
 
     protected function avatarUrl(): Attribute

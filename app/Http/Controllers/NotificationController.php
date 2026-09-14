@@ -46,10 +46,12 @@ class NotificationController extends Controller
             $notification->markAsRead();
         }
 
-        // dataカラムに含まれる遷移先URLを取得してリダイレクト
-        $redirectUrl = $notification->data['url'] ?? route('notifications.index');
+        if (! empty($notification->data['url'])) {
+            return redirect($notification->data['url']);
+        }
 
-        return redirect($redirectUrl);
+        // URLが設定されていない（お知らせ等）場合は通知詳細画面へ（$notificationを渡す）
+        return redirect()->route('notifications.show', $notification);
     }
 
     // POST /notifications/read-all
@@ -59,5 +61,15 @@ class NotificationController extends Controller
         $request->user()->unreadNotifications->markAsRead();
 
         return back()->with('success', 'すべての通知を既読にしました');
+    }
+
+    public function show(Request $request, string $id) {
+        $notification = $request->user()->notifications()->findOrFail($id);
+
+        if($notification->unread()) {
+            $notification->markAsRead();
+        }
+
+        return view('notifications.show', compact('notification'));
     }
 }

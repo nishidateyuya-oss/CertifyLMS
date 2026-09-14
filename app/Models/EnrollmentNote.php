@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,11 +18,13 @@ class EnrollmentNote extends Model
         'body',
     ];
 
-    public function author(): BelongsTo {
+    public function author(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'author_id');
     }
 
-    public function enrollment(): BelongsTo {
+    public function enrollment(): BelongsTo
+    {
         return $this->belongsTo(Enrollment::class);
     }
 }

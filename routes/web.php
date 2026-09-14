@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\Auth\OnboardingController;
 use App\Http\Controllers\BrowseController;
 use App\Http\Controllers\CertificationCatalogController;
@@ -554,10 +555,23 @@ Route::middleware(['auth'])->prefix('settings')->group(function () {
     Route::put('/password', [SettingController::class, 'changePassword'])->name('settings.password.update');
 });
 
-//メモ管理
+// メモ管理
 Route::middleware(['auth', 'role:admin,coach'])->group(function () {
     Route::post('/enrollments/{enrollment}/notes', [EnrollmentNoteController::class, 'store'])->name('enrollments.notes.store');
     Route::get('/enrollment-notes/{note}/edit', [EnrollmentNoteController::class, 'edit'])->name('enrollment-notes.edit');
     Route::patch('/enrollment-notes/{note}', [EnrollmentNoteController::class, 'update'])->name('enrollment-notes.update');
     Route::delete('/enrollment-notes/{note}', [EnrollmentNoteController::class, 'destroy'])->name('enrollment-notes.destroy');
+});
+
+// お知らせ配信(管理者)
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+    Route::get('/announcements/create', [AnnouncementController::class, 'create'])->name('announcements.create');
+    Route::get('/announcements/{announcement}', [AnnouncementController::class, 'show'])->name('announcements.show');
+    Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
+});
+
+//お知らせ配信詳細(受講者)
+Route::middleware(['auth', 'role:student', 'active-learning'])->group(function () {
+    Route::get('/notification/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
 });

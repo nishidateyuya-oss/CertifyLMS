@@ -170,4 +170,9 @@ class Certification extends Model
     {
         return $this->hasMany(QaThread::class);
     }
+
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(Announcement::class);
+    }
 }
