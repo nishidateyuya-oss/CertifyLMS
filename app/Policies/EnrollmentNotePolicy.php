@@ -1,12 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\Enrollment;
 use App\Models\EnrollmentNote;
 use App\Models\User;
-use App\Enums\UserRole;
-use Illuminate\Auth\Access\Response;
 
 class EnrollmentNotePolicy
 {
@@ -31,7 +32,7 @@ class EnrollmentNotePolicy
      */
     public function create(User $user, Enrollment $enrollment): bool
     {
-        if($user->role === UserRole::Admin) {
+        if ($user->role === UserRole::Admin) {
             return true;
         }
 
@@ -42,8 +43,8 @@ class EnrollmentNotePolicy
      * Determine whether the user can update the model.
      */
     public function update(User $user, EnrollmentNote $enrollmentNote): bool
-    {   
-        if($user->role === UserRole::Admin) {
+    {
+        if ($user->role === UserRole::Admin) {
             return true;
         }
 
@@ -55,7 +56,7 @@ class EnrollmentNotePolicy
      */
     public function delete(User $user, EnrollmentNote $enrollmentNote): bool
     {
-        if($user->role === UserRole::Admin) {
+        if ($user->role === UserRole::Admin) {
             return true;
         }
 

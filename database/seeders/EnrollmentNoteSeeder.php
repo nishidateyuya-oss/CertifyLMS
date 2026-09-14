@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
@@ -16,7 +18,7 @@ class EnrollmentNoteSeeder extends Seeder
     public function run(): void
     {
         // 1. 各ロールのユーザーを取得
-        $admin = User::where('role', UserRole::Admin)->first() 
+        $admin = User::where('role', UserRole::Admin)->first()
             ?? User::factory()->create(['role' => UserRole::Admin]);
 
         $coaches = User::where('role', UserRole::Coach)->get();

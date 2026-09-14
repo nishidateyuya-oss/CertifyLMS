@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Models\Announcement;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\Meeting;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
+use Illuminate\Support\Str;
 
 class NewMessageNotification extends Notification
 {
@@ -49,9 +51,14 @@ class NewMessageNotification extends Notification
 
     public function toArray(object $notifiable): array
     {
+        $fullBody = $this->source instanceof Announcement 
+        ? $this->source->body 
+        : $this->buildBody();
+        
         return [
             'title' => $this->buildTitle(),
             'message' => $this->buildBody(),
+            'body' => $fullBody,
             'url' => $this->buildUrl(),
         ];
     }
@@ -62,6 +69,7 @@ class NewMessageNotification extends Notification
     private function buildTitle(): string
     {
         return match (true) {
+            $this->source instanceof Announcement => $this->source->title ?? '運営からのお知らです',
             $this->source instanceof Meeting => '面談予約が確定しました',
             $this->source instanceof ChatMessage => '新着チャットメッセージがあります',
             $this->source instanceof QaReply => '質問掲示板に回答がありました',
@@ -74,6 +82,12 @@ class NewMessageNotification extends Notification
      */
     private function buildBody(): string
     {
+
+        if ($this->source instanceof Announcement) {
+            // お知らせの本文または抜粋を表示（50文字で切る例）
+            return Str::limit($this->source->body, 50, '...');
+        }
+
         if ($this->source instanceof Meeting) {
             $schedule = $this->source->scheduled_at?->format('Y/m/d H:i');
 
@@ -100,6 +114,11 @@ class NewMessageNotification extends Notification
      */
     private function buildUrl(): string
     {
+        if ($this->source instanceof Announcement) {
+            // 外部の業務画面を持たないため空文字（または route('notifications.index')）
+            return '';
+        }
+
         if ($this->source instanceof Meeting) {
             return route('meetings.show', ['meeting' => $this->source->id]);
         }
