@@ -1,0 +1,16 @@
+[90m= [39m[34;4mApp\Models\Meeting[39;24m {#8344
+    [34mid[39m: [32m"[39m[32m01m2hvc7vj0ftmt393w5n0fdvf[39m[32m"[39m,
+    [34menrollment_id[39m: [32m"[39m[32m01m2hva0knxrc0eteg3a0dzzjh[39m[32m"[39m,
+    [34mcoach_id[39m: [32m"[39m[32m01m2hv9zc1271d53gn4khrgxzv[39m[32m"[39m,
+    [34mstudent_id[39m: [32m"[39m[32m01m2hv9zcmj3vbth4rvpy216jb[39m[32m"[39m,
+    [34mscheduled_at[39m: [32m"[39m[32m2026-09-15 17:00:00[39m[32m"[39m,
+    [34mstatus[39m: [32m"[39m[32mreserved[39m[32m"[39m,
+    [34mtopic[39m: [32m"[39m[32maa[39m[32m"[39m,
+    [34mcanceled_by_user_id[39m: [36mnull[39m,
+    [34mcanceled_at[39m: [36mnull[39m,
+    [34mmeeting_url_snapshot[39m: [32m"[39m[32mhttps://meet.google.com/coach-taro-room[39m[32m"[39m,
+    [34mcompleted_at[39m: [36mnull[39m,
+    [34mmeeting_quota_transaction_id[39m: [32m"[39m[32m01m2hvc7vr3wfysjy2jfv0h49z[39m[32m"[39m,
+    [34mcreated_at[39m: [32m"[39m[32m2026-09-15 15:16:56[39m[32m"[39m,
+    [34mupdated_at[39m: [32m"[39m[32m2026-09-15 15:16:56[39m[32m"[39m,
+  }
