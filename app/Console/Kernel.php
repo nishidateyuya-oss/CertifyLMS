@@ -30,6 +30,9 @@ class Kernel extends ConsoleKernel
 
         // 終了時刻超過の reserved 面談を completed に自動遷移(15 分間隔でリアルタイム性確保)
         $schedule->command('meetings:auto-complete')->cron('*/15 * * * *')->withoutOverlapping(5);
+
+        // 以下模擬案件、面談時間お知らせスケジューラー
+        $schedule->command('app:run-meeting-daily-batch')->hourly();
     }
 
     /**

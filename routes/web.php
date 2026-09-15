@@ -571,7 +571,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
 });
 
-//お知らせ配信詳細(受講者)
+// お知らせ配信詳細(受講者)
 Route::middleware(['auth', 'role:student', 'active-learning'])->group(function () {
     Route::get('/notification/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
 });

@@ -51,10 +51,10 @@ class NewMessageNotification extends Notification
 
     public function toArray(object $notifiable): array
     {
-        $fullBody = $this->source instanceof Announcement 
-        ? $this->source->body 
+        $fullBody = $this->source instanceof Announcement
+        ? $this->source->body
         : $this->buildBody();
-        
+
         return [
             'title' => $this->buildTitle(),
             'message' => $this->buildBody(),
@@ -69,7 +69,7 @@ class NewMessageNotification extends Notification
     private function buildTitle(): string
     {
         return match (true) {
-            $this->source instanceof Announcement => $this->source->title ?? '運営からのお知らです',
+            $this->source instanceof Announcement => $this->source->title ?? '運営からのお知らせです',
             $this->source instanceof Meeting => '面談予約が確定しました',
             $this->source instanceof ChatMessage => '新着チャットメッセージがあります',
             $this->source instanceof QaReply => '質問掲示板に回答がありました',

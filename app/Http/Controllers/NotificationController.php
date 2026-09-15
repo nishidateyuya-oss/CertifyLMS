@@ -63,10 +63,11 @@ class NotificationController extends Controller
         return back()->with('success', 'すべての通知を既読にしました');
     }
 
-    public function show(Request $request, string $id) {
+    public function show(Request $request, string $id)
+    {
         $notification = $request->user()->notifications()->findOrFail($id);
 
-        if($notification->unread()) {
+        if ($notification->unread()) {
             $notification->markAsRead();
         }
 

@@ -12,7 +12,6 @@ use App\Models\Certification;
 use App\Models\User;
 use App\Notifications\NewMessageNotification;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class AnnouncementSeeder extends Seeder
 {
