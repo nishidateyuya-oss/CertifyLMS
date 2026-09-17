@@ -23,12 +23,13 @@ final class IndexAction
     {
         return Enrollment::query()
             ->forUser($student)
-            ->with([
-                'certification.category',
-                'certification.coaches',
-                'latestStatusLog',
-                'certificate',
-            ])
+            ->whereHas('certification', fn ($q) => $q->published())
+        ->with([
+            'certification.category',
+            'certification.coaches',
+            'latestStatusLog',
+            'certificate',
+        ])
             // NULLS LAST: exam_date 未設定の Enrollment は最下段に集める
             ->orderByRaw('CASE WHEN exam_date IS NULL THEN 1 ELSE 0 END')
             ->orderBy('current_term')
