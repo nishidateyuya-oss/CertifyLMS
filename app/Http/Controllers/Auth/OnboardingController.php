@@ -22,6 +22,10 @@ class OnboardingController extends Controller
             return view('auth.invitation-invalid');
         }
 
+        if (! $invitation->isUsable()) {
+            abort(410, 'この招待URLはすでに使用されているか、有効期限が切れています。');
+        }
+
         $postUrl = URL::temporarySignedRoute(
             'onboarding.store',
             $invitation->expires_at,
@@ -39,6 +43,10 @@ class OnboardingController extends Controller
         OnboardingRequest $request,
         OnboardAction $action,
     ): RedirectResponse {
+        if (! $invitation->isUsable()) {
+            abort(410, 'この招待URLはすでに使用されているか、有効期限が切れています。');
+        }
+
         $action($invitation, $request->validated());
 
         return redirect()->route('dashboard.index');
