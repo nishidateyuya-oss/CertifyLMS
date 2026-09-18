@@ -168,8 +168,7 @@ class EnrollmentController extends Controller
     ): RedirectResponse {
         $action($enrollment, $request->validated());
 
-        return redirect()
-            ->route('dashboard.index')
+        return back()
             ->with('success', '目標受験日を更新しました。');
     }
 
