@@ -48,7 +48,7 @@ class BrowseController extends Controller
     }
 
     public function showChapter(Chapter $chapter, ShowChapterAction $action): View
-    {   
+    {
         $this->authorize('view', $chapter);
 
         return view('learning.chapters.show', $action($chapter, auth()->user()));
