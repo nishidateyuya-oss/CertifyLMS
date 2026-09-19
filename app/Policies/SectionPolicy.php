@@ -39,6 +39,10 @@ class SectionPolicy
             return ($section->status === ContentStatus::Draft) && $this->canManage($auth, $section->chapter->part->certification);
         }
 
+        if($auth->role === UserRole::Student){
+            return $section->chapter->part->certification->enrollments()->where('user_id', $auth->id)->exists();
+        }
+
         return $section->status === ContentStatus::Published
             && $section->chapter->status === ContentStatus::Published
             && $section->chapter->part->status === ContentStatus::Published;

@@ -34,6 +34,7 @@ class ChapterPolicy
         return match ($auth->role) {
             UserRole::Admin => true,
             UserRole::Coach => $this->assignedCoach($auth, $chapter->part->certification),
+            UserRole::Student => $chapter->part->certification->enrollments()->where('user_id', $auth->id)->exists(),
             default => $chapter->status === ContentStatus::Published,
         };
     }

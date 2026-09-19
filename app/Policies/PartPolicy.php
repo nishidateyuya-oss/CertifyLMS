@@ -33,6 +33,7 @@ class PartPolicy
         return match ($auth->role) {
             UserRole::Admin => true,
             UserRole::Coach => $this->assignedCoach($auth, $part->certification),
+            UserRole::Student => $part->certification->enrollments()->where('user_id', $auth->id)->exists(),
             default => $part->status === ContentStatus::Published,
         };
     }
