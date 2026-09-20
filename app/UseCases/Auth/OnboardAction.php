@@ -15,7 +15,6 @@ use App\Services\UserStatusChangeService;
 use App\UseCases\MeetingQuota\GrantInitialQuotaAction;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 /**
  * 招待を受領し、既存 invited User を受講中(in_progress)に遷移させ、自動ログインさせるユースケース。
@@ -66,7 +65,8 @@ final class OnboardAction
             $attrs = [
                 'name' => $validated['name'],
                 'bio' => $validated['bio'] ?? null,
-                'password' => Hash::make($validated['password']),
+                'password' => $validated['password'],
+                'status' => UserStatus::InProgress,
                 'profile_setup_completed' => true,
                 'email_verified_at' => $now,
             ];
