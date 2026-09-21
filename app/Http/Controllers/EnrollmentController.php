@@ -59,6 +59,11 @@ class EnrollmentController extends Controller
             $query->withTrashed();
         }
 
+        if ($user->role === UserRole::Coach) {
+            $assignedCertificationIds = $user->coachingCertificationIds();
+            $query->whereIn('certification_id', $assignedCertificationIds);
+        }
+
         if ($status = $request->string('status')->toString()) {
             $query->where('status', EnrollmentStatus::from($status)->value);
         }
