@@ -74,6 +74,7 @@ class ChatUnreadCountService
 
         $counts = ChatMessage::query()
             ->whereIn('chat_room_id', $members->pluck('chat_room_id')->all())
+            ->where('sender_user_id', '!=', $user->id)
             ->where(function ($q) use ($members): void {
                 foreach ($members as $member) {
                     $q->orWhere(function ($inner) use ($member): void {
