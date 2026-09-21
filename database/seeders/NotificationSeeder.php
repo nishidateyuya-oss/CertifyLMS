@@ -41,7 +41,7 @@ class NotificationSeeder extends Seeder
         $coach = User::where('role', UserRole::Coach)->first();
         $room = ChatRoom::firstOrCreate(['enrollment_id' => $enrollment->id]);
         $chatMessage = ChatMessage::where('chat_room_id', $room->id)
-                            ->where('sender_user_id', $coach->id)->first();
+            ->where('sender_user_id', $coach->id)->first();
         $meeting = Meeting::first() ?? Meeting::factory()->create();
         $qaReply = QaReply::first() ?? QaReply::factory()->create();
 
@@ -49,11 +49,11 @@ class NotificationSeeder extends Seeder
 
         foreach ($sources as $index => $source) {
             // NewMessageNotification のコンストラクタに直接モデルインスタンスを渡す
-            if($source instanceof ChatMessage) {
+            if ($source instanceof ChatMessage) {
                 NewMessageNotification::sendForChatMessage($room, $coach, $chatMessage);
             } else {
                 $notification = new NewMessageNotification($source);
-            $student->notify($notification);
+                $student->notify($notification);
             }
             // 奇数番目の通知だけテスト用に既読化
             if ($index % 2 === 1) {
