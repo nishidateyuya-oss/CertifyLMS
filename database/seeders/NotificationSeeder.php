@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Enums\UserRole;
 use App\Models\ChatMessage;
+use App\Models\ChatRoom;
 use App\Models\Meeting;
 use App\Models\QaReply;
 use App\Models\User;
@@ -36,17 +37,24 @@ class NotificationSeeder extends Seeder
     private function seedStudentNotifications(User $student): void
     {
         // ソースとなる各モデルを取得（無ければ Factory で作成）
+        $enrollment = $student->enrollments->first();
+        $coach = User::where('role', UserRole::Coach)->first();
+        $room = ChatRoom::firstOrCreate(['enrollment_id' => $enrollment->id]);
+        $chatMessage = ChatMessage::where('chat_room_id', $room->id)
+                            ->where('sender_user_id', $coach->id)->first();
         $meeting = Meeting::first() ?? Meeting::factory()->create();
-        $chatMessage = ChatMessage::first() ?? ChatMessage::factory()->create();
         $qaReply = QaReply::first() ?? QaReply::factory()->create();
 
         $sources = [$meeting, $chatMessage, $qaReply];
 
         foreach ($sources as $index => $source) {
             // NewMessageNotification のコンストラクタに直接モデルインスタンスを渡す
-            $notification = new NewMessageNotification($source);
+            if($source instanceof ChatMessage) {
+                NewMessageNotification::sendForChatMessage($room, $coach, $chatMessage);
+            } else {
+                $notification = new NewMessageNotification($source);
             $student->notify($notification);
-
+            }
             // 奇数番目の通知だけテスト用に既読化
             if ($index % 2 === 1) {
                 $student->unreadNotifications()->first()?->markAsRead();
