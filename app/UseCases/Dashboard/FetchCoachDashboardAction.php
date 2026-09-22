@@ -44,6 +44,7 @@ final class FetchCoachDashboardAction
         $assignedEnrollments = Enrollment::query()
             ->whereIn('certification_id', $coachingCertificationIds)
             ->whereIn('status', [EnrollmentStatus::Learning, EnrollmentStatus::Passed])
+            ->with(['user', 'certification'])
             ->withMax('learningSessions as last_activity_at', 'started_at')
             ->get();
 
