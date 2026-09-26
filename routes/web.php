@@ -17,6 +17,7 @@ use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\EnrollmentGoalController;
 use App\Http\Controllers\EnrollmentManagementController;
 use App\Http\Controllers\EnrollmentNoteController;
+use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LearningHourTargetController;
 use App\Http\Controllers\MeetingController;
@@ -575,3 +576,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 Route::middleware(['auth', 'role:student', 'active-learning'])->group(function () {
     Route::get('/notification/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
 });
+
+// 以下、模擬案件応用
+Route::middleware(['auth', 'role:coach'])
+    ->prefix('settings/google-calendar')
+    ->name('settings.google-calendar.') // ← プレフィックスルート名を追加
+    ->group(function () {
+        Route::get('/redirect', [GoogleCalendarController::class, 'connect'])->name('redirect');
+        Route::get('/callback', [GoogleCalendarController::class, 'callback'])->name('callback');
+        Route::delete('/', [GoogleCalendarController::class, 'disconnect'])->name('destroy');
+    });

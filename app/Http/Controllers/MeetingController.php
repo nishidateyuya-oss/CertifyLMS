@@ -22,6 +22,7 @@ use App\Models\MeetingMemo;
 use App\Models\User;
 use App\Notifications\NewMessageNotification;
 use App\Services\CoachMeetingLoadService;
+use App\Services\GoogleCalendarService;
 use App\Services\MeetingAvailabilityService;
 use App\Services\MeetingQuotaService;
 use App\UseCases\MeetingQuota\ConsumeQuotaAction;
@@ -168,6 +169,7 @@ class MeetingController extends Controller
         CoachMeetingLoadService $coachLoadService,
         MeetingQuotaService $quotaService,
         ConsumeQuotaAction $consumeAction,
+        GoogleCalendarService $googleCalendarService,
     ): RedirectResponse {
         $scheduledAt = Carbon::parse($request->validated('scheduled_at'));
         $topic = $request->validated('topic');
@@ -217,6 +219,14 @@ class MeetingController extends Controller
             return $meeting->fresh();
         });
 
+        $coachAccount = $meeting->coach->googleCredential;
+        if ($coachAccount) {
+            $googleEventId = $googleCalendarService->createMeetingEvent($coachAccount, $meeting);
+            if ($googleEventId) {
+                $meeting->update(['google_event_id' => $googleEventId]);
+            }
+        }
+
         // 模擬案件通知処理追加
         $student->notify(new NewMessageNotification($meeting));
         $meeting->coach->notify(new NewMessageNotification($meeting));
@@ -233,6 +243,7 @@ class MeetingController extends Controller
     public function cancel(
         Meeting $meeting,
         RefundQuotaAction $refundAction,
+        GoogleCalendarService $googleCalendarService,
     ): RedirectResponse {
         $this->authorize('cancel', $meeting);
 
@@ -256,6 +267,11 @@ class MeetingController extends Controller
 
             $refundAction($locked->student, $locked->id);
         });
+
+        $coachAccount = $meeting->coach->googleCredential;
+        if ($coachAccount && $meeting->google_event_id) {
+            $googleCalendarService->deleteMeetingEvent($coachAccount, $meeting->google_event_id);
+        }
 
         return redirect()
             ->route('meetings.show', $meeting)
@@ -288,22 +304,117 @@ class MeetingController extends Controller
     /**
      * 予約画面が呼ぶ空き枠取得 JSON エンドポイント。
      */
-    public function fetchAvailability(Enrollment $enrollment, AvailabilityRequest $request, MeetingAvailabilityService $availabilityService): JsonResponse
-    {
+    public function fetchAvailability(
+        Enrollment $enrollment,
+        AvailabilityRequest $request,
+        MeetingAvailabilityService $availabilityService,
+        GoogleCalendarService $googleCalendarService,
+    ): JsonResponse {
         $date = Carbon::parse($request->validated('date'));
-        $slots = $availabilityService->slotsForCertification(
-            $enrollment->loadMissing('certification')->certification,
-            $date,
-        );
+        $certification = $enrollment->loadMissing('certification')->certification;
 
+        // 1. DB基準の空き枠を取得
+        $slots = $availabilityService->slotsForCertification($certification, $date);
+
+        // 2. 該当資格のGoogle連携済コーチを取得
+        $coachesWithGoogle = $certification->coaches()
+            ->has('googleCredential')
+            ->with('googleCredential')
+            ->get();
+
+        // コーチ数が0、または枠が0ならそのまま返す（無駄なAPI呼び出しを防止）
+        if ($coachesWithGoogle->isEmpty() || $slots->isEmpty()) {
+            return response()->json([
+                'date' => $date->toDateString(),
+                'slots' => $slots->map(fn (array $slot) => [
+                    'slot_start' => $slot['slot_start']->toIso8601String(),
+                    'slot_end' => $slot['slot_end']->toIso8601String(),
+                    'available_coach_count' => $slot['available_coach_count'],
+                ])->all(),
+            ]);
+        }
+
+        // 3. コーチごとに「その日1日分（00:00〜23:59）」の Busy スロットを一括取得
+        $dayStart = $date->copy()->startOfDay();
+        $dayEnd = $date->copy()->endOfDay();
+
+        $coachBusyMap = [];
+        foreach ($coachesWithGoogle as $coach) {
+            // 1回のAPI呼出でその日の全Busy枠を取得しておく
+            $coachBusyMap[$coach->id] = $googleCalendarService->getBusySlots(
+                $coach->googleCredential,
+                $dayStart,
+                $dayEnd
+            );
+        }
+
+        // 4. 各スロットについて「実際にシフトが入っていて、かつ Busy でないコーチ」を判定
+        $filteredSlots = $slots->map(function (array $slot) use ($certification, $coachesWithGoogle, $coachBusyMap) {
+            $slotStart = $slot['slot_start'];
+            $slotEnd = $slot['slot_end'];
+
+            // このスロットの時間帯に、Google連携コーチのうち「シフトがあり、かつ Busy な人」の数をカウント
+            $busyCount = 0;
+            foreach ($coachesWithGoogle as $coach) {
+                // 元々そのスロットにそのコーチのシフト／空きがあるか確認
+                if ($this->isCoachAssignedToSlot($certification, $coach, $slotStart)) {
+                    $busySlots = $coachBusyMap[$coach->id] ?? [];
+
+                    // Google カレンダーの Busy 枠と重なっているかチェック
+                    if ($this->hasOverlap($busySlots, $slotStart, $slotEnd)) {
+                        $busyCount++;
+                    }
+                }
+            }
+
+            // 該当スロットの利用可能枠数から、重複があったコーチ分だけ差し引く
+            $slot['available_coach_count'] = max(0, $slot['available_coach_count'] - $busyCount);
+
+            return $slot;
+        })->filter(fn (array $slot) => $slot['available_coach_count'] > 0);
+
+        // 5. フィルタリング後の $filteredSlots を返却
         return response()->json([
             'date' => $date->toDateString(),
-            'slots' => $slots->map(fn (array $slot) => [
+            'slots' => $filteredSlots->map(fn (array $slot) => [
                 'slot_start' => $slot['slot_start']->toIso8601String(),
                 'slot_end' => $slot['slot_end']->toIso8601String(),
                 'available_coach_count' => $slot['available_coach_count'],
-            ])->all(),
+            ])->values()->all(),
         ]);
+    }
+
+    /**
+     * 当該コーチが指定スロットにシフト登録されているか（プライベートヘルパー）
+     */
+    private function isCoachAssignedToSlot(Certification $certification, User $coach, Carbon $scheduledAt): bool
+    {
+        $time = $scheduledAt->format('H:i:s');
+
+        return $coach->coachAvailabilities()
+            ->where('day_of_week', $scheduledAt->dayOfWeek)
+            ->where('is_active', true)
+            ->where('start_time', '<=', $time)
+            ->where('end_time', '>', $time)
+            ->exists();
+    }
+
+    /**
+     * Busy スロットと判定対象スロットに重複があるか確認（プライベートヘルパー）
+     */
+    private function hasOverlap(array $busySlots, Carbon $slotStart, Carbon $slotEnd): bool
+    {
+        foreach ($busySlots as $busy) {
+            $busyStart = Carbon::parse($busy['start']);
+            $busyEnd = Carbon::parse($busy['end']);
+
+            // 時間帯の重なり判定: (StartA < EndB) AND (EndA > StartB)
+            if ($slotStart->lessThan($busyEnd) && $slotEnd->greaterThan($busyStart)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

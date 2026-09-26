@@ -27,6 +27,7 @@ return new class extends Migration
             $table->foreignUlid('student_id')->constrained('users')->restrictOnDelete();
             $table->dateTime('scheduled_at');
             $table->string('status', 20);
+            $table->string('google_event_id')->nullable();
             $table->text('topic');
             $table->foreignUlid('canceled_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->dateTime('canceled_at')->nullable();
