@@ -37,4 +37,11 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
     ],
+
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'enabled' => env('AI_CHAT_ENABLED', true),
+        'daily_limit' => env('AI_CHAT_DAILY_LIMIT', 50),
+        'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+    ],
 ];

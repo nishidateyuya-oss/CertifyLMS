@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\Auth\OnboardingController;
 use App\Http\Controllers\BrowseController;
@@ -51,6 +52,7 @@ use App\Http\Controllers\Settings\SettingsDefaultEnrollmentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeakDrillController;
 use App\Http\Controllers\WeakDrillResultController;
+use App\Http\Middleware\EnsureAiChatEnabled;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -586,3 +588,12 @@ Route::middleware(['auth', 'role:coach'])
         Route::get('/callback', [GoogleCalendarController::class, 'callback'])->name('callback');
         Route::delete('/', [GoogleCalendarController::class, 'disconnect'])->name('destroy');
     });
+
+Route::middleware(['auth', 'role:student', 'active-learning', EnsureAiChatEnabled::class])->prefix('ai-chat')->group(function () {
+    Route::get('/', [AiChatController::class, 'index'])->name('ai-chat.index');
+    Route::post('/conversations', [AiChatController::class, 'store'])->name('ai-chat.conversations.store');
+    Route::get('/conversations/{conversation}', [AiChatController::class, 'show'])->name('ai-chat.conversations.show');
+    Route::patch('/conversations/{conversation}', [AiChatController::class, 'update'])->name('ai-chat.conversations.update');
+    Route::delete('/conversations/{conversation}', [AiChatController::class, 'destroy'])->name('ai-chat.conversations.destroy');
+    Route::post('/conversations/{conversation}/messages', [AiChatController::class, 'storeMessage'])->name('ai-chat.conversations.messages.store');
+});
