@@ -37,6 +37,12 @@ return new class extends Migration
                 ->nullable()
                 ->constrained('meeting_quota_transactions')
                 ->nullOnDelete();
+            // キャンセル時は NULL、それ以外は coach_id を保持する仮想カラム
+            $table->string('active_coach_id', 36)
+                ->storedAs("CASE WHEN status != 'canceled' THEN coach_id ELSE NULL END");
+
+            // active_coach_id と scheduled_at で複合ユニークを貼る
+            $table->unique(['active_coach_id', 'scheduled_at'], 'unique_active_coach_scheduled');
             $table->timestamps();
 
             // 受講生別履歴一覧 / 自動完了 Schedule Command 高速化のための補助 INDEX

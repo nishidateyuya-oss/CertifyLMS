@@ -185,19 +185,25 @@ class MeetingController extends Controller
             $quotaService,
             $consumeAction,
         ) {
+            // 1. クオータチェック
             if ($quotaService->remaining($student) < 1) {
                 throw new InsufficientMeetingQuotaException;
             }
 
+            // 2. 予約可能枠チェック（定休日や受付時間外など）
             $availabilityService->validateSlot($enrollment->certification, $scheduledAt);
 
+            // 3. 空きコーチ候補の抽出
             $candidates = $this->findAvailableCoaches($enrollment->certification, $scheduledAt);
             if ($candidates->isEmpty()) {
+                // 空きコーチなし -> 409例外をスロー
                 throw new MeetingNoAvailableCoachException;
             }
 
+            // 4. 最も負荷の低いコーチを選択
             $coach = $coachLoadService->leastLoadedCoach($candidates);
 
+            // 5. 面談データの作成（DBの UNIQUE 制約で競合を防止）
             try {
                 $meeting = Meeting::create([
                     'enrollment_id' => $enrollment->id,
@@ -209,16 +215,19 @@ class MeetingController extends Controller
                     'meeting_url_snapshot' => $coach->meeting_url,
                 ]);
             } catch (UniqueConstraintViolationException $e) {
-                // 同時刻に他受講生が先行予約した race condition: UNIQUE(coach_id, scheduled_at) で弾かれた
+                // 同時刻に別リクエストが同じコーチを先行予約した場合
+                // DBの UNIQUE 制約違反をキャッチして 409例外に変換
                 throw new MeetingNoAvailableCoachException($e);
             }
 
+            // 6. クオータ消費処理
             $transaction = ($consumeAction)($student, $meeting->id);
             $meeting->update(['meeting_quota_transaction_id' => $transaction->id]);
 
             return $meeting->fresh();
         });
 
+        // 7. Google Calendar 連携 (トランザクション外で実行)
         $coachAccount = $meeting->coach->googleCredential;
         if ($coachAccount) {
             $googleEventId = $googleCalendarService->createMeetingEvent($coachAccount, $meeting);
@@ -227,7 +236,7 @@ class MeetingController extends Controller
             }
         }
 
-        // 模擬案件通知処理追加
+        // 8. 通知処理
         $student->notify(new NewMessageNotification($meeting));
         $meeting->coach->notify(new NewMessageNotification($meeting));
 
