@@ -47,6 +47,11 @@ final class IndexAction
         }
 
         return $query
+            ->withCount('mockExamQuestions')
+
+            ->with(['sessions' => function ($q) {
+                $q->latest('id'); 
+            }])
             ->orderBy('certification_id')
             ->orderBy('order')
             ->orderByDesc('updated_at')
