@@ -4,120 +4,63 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\UseCases\Meeting\CancelMeetingAction;
+use App\UseCases\Meeting\FetchMeetingAvailabilityAction;
+use App\UseCases\Meeting\GetCoachMeetingListAction;
+use App\UseCases\Meeting\GetMeetingDetailAction;
+use App\UseCases\Meeting\GetStudentMeetingListAction;
+use App\UseCases\Meeting\ReserveMeetingAction;
+use App\UseCases\Meeting\UpsertMeetingMemoAction;
 use App\Enums\EnrollmentStatus;
-use App\Enums\MeetingStatus;
-use App\Exceptions\MeetingQuota\InsufficientMeetingQuotaException;
-use App\Exceptions\Mentoring\MeetingAlreadyStartedException;
-use App\Exceptions\Mentoring\MeetingNoAvailableCoachException;
-use App\Exceptions\Mentoring\MeetingStatusTransitionException;
 use App\Http\Requests\Meeting\AvailabilityRequest;
 use App\Http\Requests\Meeting\IndexAsCoachRequest;
 use App\Http\Requests\Meeting\IndexRequest;
 use App\Http\Requests\Meeting\StoreRequest;
 use App\Http\Requests\Meeting\UpsertMemoRequest;
-use App\Models\Certification;
 use App\Models\Enrollment;
 use App\Models\Meeting;
-use App\Models\MeetingMemo;
-use App\Models\User;
-use App\Notifications\NewMessageNotification;
-use App\Services\CoachMeetingLoadService;
-use App\Services\GoogleCalendarService;
-use App\Services\MeetingAvailabilityService;
 use App\Services\MeetingQuotaService;
-use App\UseCases\MeetingQuota\ConsumeQuotaAction;
-use App\UseCases\MeetingQuota\RefundQuotaAction;
 use Carbon\Carbon;
-use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
  * 1on1 面談予約 (Meeting) の HTTP エントリポイント。
  *
- * 受講生視点(index / show / create / store / cancel / fetchAvailability)とコーチ視点
- * (indexAsCoach / upsertMemo)を 1 Controller に集約する。予約 / キャンセル / メモ保存の
- * 状態変更系は残面談回数の消費・返却、通知発火、トランザクション境界を method 内で扱い、
- * 取得系はクエリ組み立てを method 内で行う。認可は $this->authorize() または FormRequest::authorize()。
+ * 各メソッドは受付、認可委譲、および Action クラスへの処理移譲とレスポンス整形のみを行う。
  */
 class MeetingController extends Controller
 {
     /**
      * 受講生本人の面談一覧。filter (upcoming/past/all) クエリで履歴を切り替える。
      */
-    public function index(IndexRequest $request, MeetingQuotaService $meetingQuota): View
+    public function index(IndexRequest $request, GetStudentMeetingListAction $action): View
     {
-        $filter = $request->validated('filter') ?? 'upcoming';
+        $data = $action->execute($request->user(), $request->validated('filter'));
 
-        $query = Meeting::query()
-            ->with(['enrollment.certification', 'coach'])
-            ->forStudent($request->user())
-            ->orderByDesc('scheduled_at');
-
-        $meetings = match ($filter) {
-            'past' => $query->past()->paginate(20),
-            'all' => $query->paginate(20),
-            default => $query->upcoming()->paginate(20),
-        };
-
-        return view('meeting.index', [
-            'meetings' => $meetings,
-            'filter' => $filter,
-            'meetingsRemaining' => $meetingQuota->remaining($request->user()),
-        ]);
+        return view('meeting.index', $data);
     }
 
     /**
      * コーチ宛の面談一覧。担当受講生 / 受講登録での絞り込みを併せて提供する。
      */
-    public function indexAsCoach(IndexAsCoachRequest $request): View
+    public function indexAsCoach(IndexAsCoachRequest $request, GetCoachMeetingListAction $action): View
     {
-        $filters = $request->validated();
-        $filter = $filters['filter'] ?? 'upcoming';
-        $studentId = $filters['student'] ?? null;
-        $enrollmentId = $filters['enrollment'] ?? null;
+        $data = $action->execute($request->user(), $request->validated());
 
-        $query = Meeting::query()
-            ->with(['enrollment.certification', 'student'])
-            ->forCoach($request->user())
-            ->when($studentId, fn ($q, $id) => $q->where('student_id', $id))
-            ->when($enrollmentId, fn ($q, $id) => $q->where('enrollment_id', $id));
-
-        // upcoming: 次の面談を一番上に置く (昇順) / past + all: 直近の活動を一番上 (降順)
-        $meetings = match ($filter) {
-            'past' => $query->past()->orderByDesc('scheduled_at')->paginate(20),
-            'all' => $query->orderByDesc('scheduled_at')->paginate(20),
-            default => $query->upcoming()->orderBy('scheduled_at')->paginate(20),
-        };
-
-        return view('meeting.coach.index', [
-            'meetings' => $meetings,
-            'filter' => $filter,
-            'studentFilter' => $studentId,
-            'enrollmentFilter' => $enrollmentId,
-        ]);
+        return view('meeting.coach.index', $data);
     }
 
     /**
      * 面談詳細(当事者共通)。Policy で coach/student の閲覧範囲を絞る。
      */
-    public function show(Meeting $meeting): View
+    public function show(Meeting $meeting, GetMeetingDetailAction $action): View
     {
         $this->authorize('view', $meeting);
 
-        $meeting->loadMissing([
-            'enrollment.certification',
-            'coach',
-            'student',
-            'canceledBy',
-            'meetingMemo',
-        ]);
-
         return view('meeting.show', [
-            'meeting' => $meeting,
+            'meeting' => $action->execute($meeting),
         ]);
     }
 
@@ -141,8 +84,6 @@ class MeetingController extends Controller
 
     /**
      * 予約画面のエントリポイント(URL に Enrollment 無し)。
-     * `resolve-default-enrollment` Middleware が default 資格に redirect するため、
-     * 本 method に到達するのは default 未設定 + 残存 Enrollment が 0 件 or 2+ 件のケース。
      */
     public function createFallback(): View
     {
@@ -159,86 +100,17 @@ class MeetingController extends Controller
     }
 
     /**
-     * 受講生の予約申請。残面談回数を確認し、空き枠から過去実績最少のコーチを自動割当して reserved で確定する。
-     * 同時刻 race condition は (coach_id, scheduled_at) UNIQUE 違反として検知し 409 へ変換する。
+     * 受講生の予約申請。
      */
     public function store(
         Enrollment $enrollment,
         StoreRequest $request,
-        MeetingAvailabilityService $availabilityService,
-        CoachMeetingLoadService $coachLoadService,
-        MeetingQuotaService $quotaService,
-        ConsumeQuotaAction $consumeAction,
-        GoogleCalendarService $googleCalendarService,
+        ReserveMeetingAction $action,
     ): RedirectResponse {
         $scheduledAt = Carbon::parse($request->validated('scheduled_at'));
         $topic = $request->validated('topic');
-        $student = $enrollment->user;
 
-        $meeting = DB::transaction(function () use (
-            $enrollment,
-            $student,
-            $scheduledAt,
-            $topic,
-            $availabilityService,
-            $coachLoadService,
-            $quotaService,
-            $consumeAction,
-        ) {
-            // 1. クオータチェック
-            if ($quotaService->remaining($student) < 1) {
-                throw new InsufficientMeetingQuotaException;
-            }
-
-            // 2. 予約可能枠チェック（定休日や受付時間外など）
-            $availabilityService->validateSlot($enrollment->certification, $scheduledAt);
-
-            // 3. 空きコーチ候補の抽出
-            $candidates = $this->findAvailableCoaches($enrollment->certification, $scheduledAt);
-            if ($candidates->isEmpty()) {
-                // 空きコーチなし -> 409例外をスロー
-                throw new MeetingNoAvailableCoachException;
-            }
-
-            // 4. 最も負荷の低いコーチを選択
-            $coach = $coachLoadService->leastLoadedCoach($candidates);
-
-            // 5. 面談データの作成（DBの UNIQUE 制約で競合を防止）
-            try {
-                $meeting = Meeting::create([
-                    'enrollment_id' => $enrollment->id,
-                    'coach_id' => $coach->id,
-                    'student_id' => $student->id,
-                    'scheduled_at' => $scheduledAt,
-                    'status' => MeetingStatus::Reserved->value,
-                    'topic' => $topic,
-                    'meeting_url_snapshot' => $coach->meeting_url,
-                ]);
-            } catch (UniqueConstraintViolationException $e) {
-                // 同時刻に別リクエストが同じコーチを先行予約した場合
-                // DBの UNIQUE 制約違反をキャッチして 409例外に変換
-                throw new MeetingNoAvailableCoachException($e);
-            }
-
-            // 6. クオータ消費処理
-            $transaction = ($consumeAction)($student, $meeting->id);
-            $meeting->update(['meeting_quota_transaction_id' => $transaction->id]);
-
-            return $meeting->fresh();
-        });
-
-        // 7. Google Calendar 連携 (トランザクション外で実行)
-        $coachAccount = $meeting->coach->googleCredential;
-        if ($coachAccount) {
-            $googleEventId = $googleCalendarService->createMeetingEvent($coachAccount, $meeting);
-            if ($googleEventId) {
-                $meeting->update(['google_event_id' => $googleEventId]);
-            }
-        }
-
-        // 8. 通知処理
-        $student->notify(new NewMessageNotification($meeting));
-        $meeting->coach->notify(new NewMessageNotification($meeting));
+        $meeting = $action->execute($enrollment, $scheduledAt, $topic);
 
         return redirect()
             ->route('meetings.show', $meeting)
@@ -247,40 +119,12 @@ class MeetingController extends Controller
 
     /**
      * 当事者(受講生 or コーチ)による面談キャンセル。
-     * reserved かつ開始前のみキャンセル可。消費済の面談回数 1 回分を返却する。
      */
-    public function cancel(
-        Meeting $meeting,
-        RefundQuotaAction $refundAction,
-        GoogleCalendarService $googleCalendarService,
-    ): RedirectResponse {
+    public function cancel(Meeting $meeting, CancelMeetingAction $action): RedirectResponse
+    {
         $this->authorize('cancel', $meeting);
 
-        $actor = auth()->user();
-
-        DB::transaction(function () use ($meeting, $actor, $refundAction) {
-            $locked = Meeting::query()->whereKey($meeting->id)->lockForUpdate()->first();
-            if ($locked === null || $locked->status !== MeetingStatus::Reserved) {
-                throw MeetingStatusTransitionException::forCancel();
-            }
-
-            if ($locked->scheduled_at->lessThanOrEqualTo(now())) {
-                throw new MeetingAlreadyStartedException;
-            }
-
-            $locked->update([
-                'status' => MeetingStatus::Canceled->value,
-                'canceled_by_user_id' => $actor->id,
-                'canceled_at' => now(),
-            ]);
-
-            $refundAction($locked->student, $locked->id);
-        });
-
-        $coachAccount = $meeting->coach->googleCredential;
-        if ($coachAccount && $meeting->google_event_id) {
-            $googleCalendarService->deleteMeetingEvent($coachAccount, $meeting->google_event_id);
-        }
+        $action->execute($meeting, auth()->user());
 
         return redirect()
             ->route('meetings.show', $meeting)
@@ -288,22 +132,14 @@ class MeetingController extends Controller
     }
 
     /**
-     * 担当コーチによる面談メモ作成・更新。canceled の面談にはメモを残せない。
+     * 担当コーチによる面談メモ作成・更新。
      */
-    public function upsertMemo(Meeting $meeting, UpsertMemoRequest $request): RedirectResponse
-    {
-        $body = $request->validated('body');
-
-        DB::transaction(function () use ($meeting, $body) {
-            if (! in_array($meeting->status, [MeetingStatus::Reserved, MeetingStatus::Completed], true)) {
-                throw MeetingStatusTransitionException::forMemo();
-            }
-
-            MeetingMemo::updateOrCreate(
-                ['meeting_id' => $meeting->id],
-                ['body' => $body],
-            );
-        });
+    public function upsertMemo(
+        Meeting $meeting,
+        UpsertMemoRequest $request,
+        UpsertMeetingMemoAction $action,
+    ): RedirectResponse {
+        $action->execute($meeting, $request->validated('body'));
 
         return redirect()
             ->route('meetings.show', $meeting)
@@ -316,137 +152,10 @@ class MeetingController extends Controller
     public function fetchAvailability(
         Enrollment $enrollment,
         AvailabilityRequest $request,
-        MeetingAvailabilityService $availabilityService,
-        GoogleCalendarService $googleCalendarService,
+        FetchMeetingAvailabilityAction $action,
     ): JsonResponse {
         $date = Carbon::parse($request->validated('date'));
-        $certification = $enrollment->loadMissing('certification')->certification;
 
-        // 1. DB基準の空き枠を取得
-        $slots = $availabilityService->slotsForCertification($certification, $date);
-
-        // 2. 該当資格のGoogle連携済コーチを取得
-        $coachesWithGoogle = $certification->coaches()
-            ->has('googleCredential')
-            ->with('googleCredential')
-            ->get();
-
-        // コーチ数が0、または枠が0ならそのまま返す（無駄なAPI呼び出しを防止）
-        if ($coachesWithGoogle->isEmpty() || $slots->isEmpty()) {
-            return response()->json([
-                'date' => $date->toDateString(),
-                'slots' => $slots->map(fn (array $slot) => [
-                    'slot_start' => $slot['slot_start']->toIso8601String(),
-                    'slot_end' => $slot['slot_end']->toIso8601String(),
-                    'available_coach_count' => $slot['available_coach_count'],
-                ])->all(),
-            ]);
-        }
-
-        // 3. コーチごとに「その日1日分（00:00〜23:59）」の Busy スロットを一括取得
-        $dayStart = $date->copy()->startOfDay();
-        $dayEnd = $date->copy()->endOfDay();
-
-        $coachBusyMap = [];
-        foreach ($coachesWithGoogle as $coach) {
-            // 1回のAPI呼出でその日の全Busy枠を取得しておく
-            $coachBusyMap[$coach->id] = $googleCalendarService->getBusySlots(
-                $coach->googleCredential,
-                $dayStart,
-                $dayEnd
-            );
-        }
-
-        // 4. 各スロットについて「実際にシフトが入っていて、かつ Busy でないコーチ」を判定
-        $filteredSlots = $slots->map(function (array $slot) use ($certification, $coachesWithGoogle, $coachBusyMap) {
-            $slotStart = $slot['slot_start'];
-            $slotEnd = $slot['slot_end'];
-
-            // このスロットの時間帯に、Google連携コーチのうち「シフトがあり、かつ Busy な人」の数をカウント
-            $busyCount = 0;
-            foreach ($coachesWithGoogle as $coach) {
-                // 元々そのスロットにそのコーチのシフト／空きがあるか確認
-                if ($this->isCoachAssignedToSlot($certification, $coach, $slotStart)) {
-                    $busySlots = $coachBusyMap[$coach->id] ?? [];
-
-                    // Google カレンダーの Busy 枠と重なっているかチェック
-                    if ($this->hasOverlap($busySlots, $slotStart, $slotEnd)) {
-                        $busyCount++;
-                    }
-                }
-            }
-
-            // 該当スロットの利用可能枠数から、重複があったコーチ分だけ差し引く
-            $slot['available_coach_count'] = max(0, $slot['available_coach_count'] - $busyCount);
-
-            return $slot;
-        })->filter(fn (array $slot) => $slot['available_coach_count'] > 0);
-
-        // 5. フィルタリング後の $filteredSlots を返却
-        return response()->json([
-            'date' => $date->toDateString(),
-            'slots' => $filteredSlots->map(fn (array $slot) => [
-                'slot_start' => $slot['slot_start']->toIso8601String(),
-                'slot_end' => $slot['slot_end']->toIso8601String(),
-                'available_coach_count' => $slot['available_coach_count'],
-            ])->values()->all(),
-        ]);
-    }
-
-    /**
-     * 当該コーチが指定スロットにシフト登録されているか（プライベートヘルパー）
-     */
-    private function isCoachAssignedToSlot(Certification $certification, User $coach, Carbon $scheduledAt): bool
-    {
-        $time = $scheduledAt->format('H:i:s');
-
-        return $coach->coachAvailabilities()
-            ->where('day_of_week', $scheduledAt->dayOfWeek)
-            ->where('is_active', true)
-            ->where('start_time', '<=', $time)
-            ->where('end_time', '>', $time)
-            ->exists();
-    }
-
-    /**
-     * Busy スロットと判定対象スロットに重複があるか確認（プライベートヘルパー）
-     */
-    private function hasOverlap(array $busySlots, Carbon $slotStart, Carbon $slotEnd): bool
-    {
-        foreach ($busySlots as $busy) {
-            $busyStart = Carbon::parse($busy['start']);
-            $busyEnd = Carbon::parse($busy['end']);
-
-            // 時間帯の重なり判定: (StartA < EndB) AND (EndA > StartB)
-            if ($slotStart->lessThan($busyEnd) && $slotEnd->greaterThan($busyStart)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * 担当コーチ集合のうち、(1) 当該時刻に有効な availability 枠があり、
-     * (2) 当該時刻に reserved / completed の Meeting を持たないコーチ集合を返す。
-     *
-     * @return Collection<int, User>
-     */
-    private function findAvailableCoaches(Certification $certification, Carbon $scheduledAt): Collection
-    {
-        $time = $scheduledAt->format('H:i:s');
-
-        return $certification->coaches()
-            ->whereHas('coachAvailabilities', function ($q) use ($scheduledAt, $time) {
-                $q->where('day_of_week', $scheduledAt->dayOfWeek)
-                    ->where('is_active', true)
-                    ->where('start_time', '<=', $time)
-                    ->where('end_time', '>', $time);
-            })
-            ->whereDoesntHave('meetingsAsCoach', function ($q) use ($scheduledAt) {
-                $q->where('scheduled_at', $scheduledAt)
-                    ->whereIn('status', [MeetingStatus::Reserved->value, MeetingStatus::Completed->value]);
-            })
-            ->get();
+        return response()->json($action->execute($enrollment, $date));
     }
 }
