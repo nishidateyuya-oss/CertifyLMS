@@ -102,7 +102,7 @@ final class FetchStudentDashboardAction
     private function buildEnrollmentCards($learningEnrollments): Collection
     {
         $progressMap = $this->safe(fn () => $this->progress
-                                            ->batchCalculateProgress($learningEnrollments)) ?? [];
+            ->batchCalculateProgress($learningEnrollments)) ?? [];
 
         return $learningEnrollments
             ->map(fn (Enrollment $enrollment) => $this->buildCard($enrollment, $progressMap[$enrollment->id] ?? null))

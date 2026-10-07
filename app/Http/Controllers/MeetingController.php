@@ -4,13 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\UseCases\Meeting\CancelMeetingAction;
-use App\UseCases\Meeting\FetchMeetingAvailabilityAction;
-use App\UseCases\Meeting\GetCoachMeetingListAction;
-use App\UseCases\Meeting\GetMeetingDetailAction;
-use App\UseCases\Meeting\GetStudentMeetingListAction;
-use App\UseCases\Meeting\ReserveMeetingAction;
-use App\UseCases\Meeting\UpsertMeetingMemoAction;
 use App\Enums\EnrollmentStatus;
 use App\Http\Requests\Meeting\AvailabilityRequest;
 use App\Http\Requests\Meeting\IndexAsCoachRequest;
@@ -20,6 +13,13 @@ use App\Http\Requests\Meeting\UpsertMemoRequest;
 use App\Models\Enrollment;
 use App\Models\Meeting;
 use App\Services\MeetingQuotaService;
+use App\UseCases\Meeting\CancelMeetingAction;
+use App\UseCases\Meeting\FetchMeetingAvailabilityAction;
+use App\UseCases\Meeting\GetCoachMeetingListAction;
+use App\UseCases\Meeting\GetMeetingDetailAction;
+use App\UseCases\Meeting\GetStudentMeetingListAction;
+use App\UseCases\Meeting\ReserveMeetingAction;
+use App\UseCases\Meeting\UpsertMeetingMemoAction;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;

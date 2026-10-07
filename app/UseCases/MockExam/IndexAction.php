@@ -50,7 +50,7 @@ final class IndexAction
             ->withCount('mockExamQuestions')
 
             ->with(['sessions' => function ($q) {
-                $q->latest('id'); 
+                $q->latest('id');
             }])
             ->orderBy('certification_id')
             ->orderBy('order')

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  * `consumed` トランザクションと相殺する `refunded(+1)` を INSERT する。
  * 面談キャンセル Action からは同一 DB トランザクション内で呼ばれる前提。
  */
-final class RefundQuotaAction
+class RefundQuotaAction
 {
     /**
      * @param string $meetingId キャンセルされた面談(Meeting)の ULID

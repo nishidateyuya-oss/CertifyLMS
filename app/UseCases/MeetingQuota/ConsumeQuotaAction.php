@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
  * 自身も `DB::transaction()` でラップして同一受講生に対する同時消費を直列化する(集計値ベースの
  * 残数チェックと INSERT の間に発生しうる二重消費を防ぐ)。
  */
-final class ConsumeQuotaAction
+class ConsumeQuotaAction
 {
     public function __construct(
         private readonly MeetingQuotaService $service,

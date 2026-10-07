@@ -19,7 +19,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
  * 履歴取得は受講生の面談履歴画面と admin のユーザー詳細画面から呼ばれる想定で、
  * 関連の Meeting / Payment / 管理者を Eager Loading して N+1 を抑制する。
  */
-final class MeetingQuotaService
+class MeetingQuotaService
 {
     /**
      * 受講生の残面談回数を 1 クエリで集計する。

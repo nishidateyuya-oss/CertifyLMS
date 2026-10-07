@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
  * 既存予約済時刻 を除外して各スロットの「予約可能なコーチ数」を返す。受講生にコーチ個別は提示せず、
  * 予約確定時にコーチを自動割当する。
  */
-final class MeetingAvailabilityService
+class MeetingAvailabilityService
 {
     /**
      * 指定 Certification の担当コーチ集合について、指定日 1 日分の 60 分単位空きスロットを返す。

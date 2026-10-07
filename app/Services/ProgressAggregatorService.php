@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Services\Learning\ProgressSummary;
 use App\Enums\ContentStatus;
 use App\Models\Chapter;
 use App\Models\Enrollment;
 use App\Models\Part;
+use App\Services\Learning\ProgressSummary;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -62,6 +62,7 @@ final class ProgressAggregatorService
      * 複数 Enrollment に対する Section 単位完了率を一括算出する (N+1 回避)。
      *
      * @param Collection<int, Enrollment> $enrollments
+     *
      * @return array<string, float> [enrollment_id => 進捗率]
      */
     public function batchCalculateProgress(Collection $enrollments): array

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Services\Learning\ProgressSummary;
 use App\Enums\ContentStatus;
 use App\Models\Certification;
 use App\Models\Chapter;
@@ -12,6 +11,7 @@ use App\Models\Enrollment;
 use App\Models\Part;
 use App\Models\Section;
 use App\Models\SectionProgress;
+use App\Services\Learning\ProgressSummary;
 use App\Services\ProgressAggregatorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -25,7 +25,7 @@ final class ProgressAggregatorServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new ProgressAggregatorService();
+        $this->service = new ProgressAggregatorService;
     }
 
     public function test_summarize_progress_calculates_correct_ratios(): void
@@ -53,7 +53,7 @@ final class ProgressAggregatorServiceTest extends TestCase
 
         // 3. 検証
         $this->assertInstanceOf(ProgressSummary::class, $result);
-        
+
         // Sections: 2 / 4 = 0.5 (50%)
         $this->assertSame(4, $result->sectionsTotal);
         $this->assertSame(2, $result->sectionsCompleted);
@@ -80,7 +80,7 @@ final class ProgressAggregatorServiceTest extends TestCase
 
         $part = Part::factory()->create(['certification_id' => $certification->id, 'status' => ContentStatus::Published]);
         $chapter = Chapter::factory()->create(['part_id' => $part->id, 'status' => ContentStatus::Published]);
-        
+
         // 公開・非公開の Section を作成
         $publishedSection = Section::factory()->create(['chapter_id' => $chapter->id, 'status' => ContentStatus::Published]);
         $draftSection = Section::factory()->create(['chapter_id' => $chapter->id, 'status' => ContentStatus::Draft]);

@@ -12,6 +12,7 @@ class GetCoachMeetingListAction
 {
     /**
      * @param array{filter?: string, student?: int|string|null, enrollment?: int|string|null} $filters
+     *
      * @return array{meetings: LengthAwarePaginator, filter: string, studentFilter: mixed, enrollmentFilter: mixed}
      */
     public function execute(User $coach, array $filters = []): array

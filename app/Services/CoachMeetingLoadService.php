@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  * 本 Service の `leastLoadedCoach` で 1 名に絞り込む。同数の場合は ULID 昇順で先頭を選ぶことで決定論的に
  * 同じ結果を返す(race condition 時に同じ INSERT が走るのを抑止する効果も得る)。
  */
-final class CoachMeetingLoadService
+class CoachMeetingLoadService
 {
     /**
      * 候補集合の中から、過去 30 日の completed 数が最少のコーチを 1 名返す。
