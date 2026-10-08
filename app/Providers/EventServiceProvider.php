@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Enrollment;
 use App\Events\CertificationCoachAttached;
 use App\Events\CertificationCoachDetached;
 use App\Listeners\SyncChatMembersOnCoachAssignmentChanged;
 use App\Listeners\UpdateLastLoginAt;
+use App\Observers\EnrollmentObserver;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
@@ -41,7 +43,7 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Enrollment::observe(EnrollmentObserver::class);
     }
 
     /**

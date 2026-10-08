@@ -1,0 +1,12 @@
+[90m= [39m[34;4mApp\Models\Enrollment[39;24m {#8372
+    [34mid[39m: [32m"[39m[32m01m40wr4ycxdwystx59evj7waj[39m[32m"[39m,
+    [34muser_id[39m: [32m"[39m[32m01m40wr3ye8tdh3a89rvyvvys4[39m[32m"[39m,
+    [34mcertification_id[39m: [32m"[39m[32m01m40wr4qrw9kc814q3v2dhfyb[39m[32m"[39m,
+    [34mexam_date[39m: [32m"[39m[32m2026-12-03[39m[32m"[39m,
+    [34mstatus[39m: [32m"[39m[32mlearning[39m[32m"[39m,
+    [34mcurrent_term[39m: [32m"[39m[32mmock_practice[39m[32m"[39m,
+    [34mpassed_at[39m: [36mnull[39m,
+    [34mcreated_at[39m: [32m"[39m[32m2026-10-03 21:45:14[39m[32m"[39m,
+    [34mupdated_at[39m: [32m"[39m[32m2026-10-03 21:45:22[39m[32m"[39m,
+    [34mdeleted_at[39m: [36mnull[39m,
+  }
