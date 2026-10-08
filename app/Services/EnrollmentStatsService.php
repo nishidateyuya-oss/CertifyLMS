@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\EnrollmentStatus;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -18,31 +19,46 @@ use Illuminate\Support\Facades\DB;
  */
 class EnrollmentStatsService
 {
+    public const CACHE_KEY_ADMIN_KPI = 'admin_dashboard_kpi';
+    public const CACHE_KEY_COMPLETION_RATE = 'admin_dashboard_completion_rate_by_certification';
+
     /**
-     * 全体 KPI(learning / passed / failed 件数 + 資格別内訳)を返す。
+     * 管理者ダッシュボードに関するキャッシュを一括破棄する。
+     */
+    public static function clearCache(): void
+    {
+        Cache::forget(self::CACHE_KEY_ADMIN_KPI);
+        Cache::forget(self::CACHE_KEY_COMPLETION_RATE);
+    }
+
+    /**
+     * 全体 KPI(learning / passed / failed 件数 + 資格別内訳)を返す。(キャッシュ対応)
      *
      * @return array{learning_count: int, passed_count: int, failed_count: int, total: int, by_certification: array<int, array{certification_id: string, certification_name: string, learning: int, passed: int, failed: int, total: int}>}
      */
     public function adminKpi(): array
     {
-        $counts = DB::table('enrollments')
-            ->whereNull('deleted_at')
-            ->selectRaw('status, COUNT(*) as cnt')
-            ->groupBy('status')
-            ->pluck('cnt', 'status')
-            ->all();
+        $ttl = (int) config('dashboard.cache_ttl', 3600);
 
-        $learning = (int) ($counts[EnrollmentStatus::Learning->value] ?? 0);
-        $passed = (int) ($counts[EnrollmentStatus::Passed->value] ?? 0);
-        $failed = (int) ($counts[EnrollmentStatus::Failed->value] ?? 0);
+        return Cache::remember(self::CACHE_KEY_ADMIN_KPI, $ttl, function (): array {$counts = DB::table('enrollments')
+                ->whereNull('deleted_at')
+                ->selectRaw('status, COUNT(*) as cnt')
+                ->groupBy('status')
+                ->pluck('cnt', 'status')
+                ->all();
 
-        return [
-            'learning_count' => $learning,
-            'passed_count' => $passed,
-            'failed_count' => $failed,
-            'total' => $learning + $passed + $failed,
-            'by_certification' => $this->byCertification(),
-        ];
+            $learning = (int) ($counts[EnrollmentStatus::Learning->value] ?? 0);
+            $passed = (int) ($counts[EnrollmentStatus::Passed->value] ?? 0);
+            $failed = (int) ($counts[EnrollmentStatus::Failed->value] ?? 0);
+
+            return [
+                'learning_count' => $learning,
+                'passed_count' => $passed,
+                'failed_count' => $failed,
+                'total' => $learning + $passed +$failed,
+                'by_certification' => $this->byCertification(),
+            ];
+        });
     }
 
     /**
@@ -59,17 +75,17 @@ class EnrollmentStatsService
             ->get();
 
         $result = [];
-        foreach ($rows as $row) {
-            $certId = (string) $row->certification_id;
+        foreach ($rows as$row) {
+            $certId = (string)$row->certification_id;
             $result[$certId] ??= ['learning' => 0, 'passed' => 0, 'failed' => 0];
-            $result[$certId][(string) $row->status] = (int) $row->cnt;
+            $result[$certId][(string) $row->status] = (int)$row->cnt;
         }
 
         return $result;
     }
 
     /**
-     * 資格別の修了率(passed / 全件)を Collection で返す。
+     * 資格別の修了率(passed / 全件)を Collection で返す。(キャッシュ対応)
      * 0 件の資格は除外する(0 % 表示は意味がないため)。
      * 一覧は受講生数(total)の多い順、上位 10 件まで。
      *
@@ -77,15 +93,18 @@ class EnrollmentStatsService
      */
     public function completionRateByCertification(): Collection
     {
-        return collect($this->byCertification())
-            ->filter(fn (array $row): bool => $row['total'] > 0)
-            ->map(function (array $row): array {
-                $row['completion_rate'] = round($row['passed'] / $row['total'], 4);
+        $ttl = (int) config('dashboard.cache_ttl', 3600);
 
-                return $row;
-            })
-            ->sortByDesc('total')
-            ->values();
+        return Cache::remember(self::CACHE_KEY_COMPLETION_RATE, $ttl, function (): Collection {
+            return collect($this->byCertification())
+                ->filter(fn (array $row): bool =>$row['total'] > 0)
+                ->map(function (array $row): array {$row['completion_rate'] = round($row['passed'] /$row['total'], 4);
+
+                    return $row;
+                })
+                ->sortByDesc('total')
+                ->values();
+        });
     }
 
     /**
@@ -103,8 +122,8 @@ class EnrollmentStatsService
             ->get();
 
         $byCertification = [];
-        foreach ($rows as $row) {
-            $certId = (string) $row->certification_id;
+        foreach ($rows as$row) {
+            $certId = (string)$row->certification_id;
             $byCertification[$certId] ??= [
                 'certification_id' => $certId,
                 'certification_name' => (string) $row->certification_name,
@@ -113,12 +132,12 @@ class EnrollmentStatsService
                 'failed' => 0,
                 'total' => 0,
             ];
-            $byCertification[$certId][(string) $row->status] = (int) $row->cnt;
-            $byCertification[$certId]['total'] += (int) $row->cnt;
+            $byCertification[$certId][(string) $row->status] = (int)$row->cnt;
+            $byCertification[$certId]['total'] += (int)$row->cnt;
         }
 
         $list = array_values($byCertification);
-        usort($list, fn (array $a, array $b): int => $b['total'] <=> $a['total']);
+        usort($list, fn (array $a, array$b): int => $b['total'] <=>$a['total']);
 
         return $list;
     }
